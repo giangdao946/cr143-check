@@ -16,7 +16,6 @@ async function getToken() {
   if (tokenCache.token && Date.now() < tokenCache.expiresAt - 60000) {
     return tokenCache.token;
   }
-  
   const res = await fetch(CONFIG.tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -27,7 +26,6 @@ async function getToken() {
       client_secret: CONFIG.clientSecret
     })
   });
-  
   const data = await res.json();
   tokenCache = {
     token: data.access_token,
@@ -49,7 +47,7 @@ async function kiotApi(endpoint) {
 
 // Cache all products for suggestions
 let productCache = { data: [], updatedAt: 0 };
-const CACHE_TTL = 10 * 60 * 1000; // 10 min
+const CACHE_TTL = 10 * 60 * 1000;
 
 async function getAllProducts() {
   if (productCache.data.length > 0 && Date.now() - productCache.updatedAt < CACHE_TTL) {
@@ -67,21 +65,16 @@ async function getAllProducts() {
   return all;
 }
 
-// Preload on startup
 setTimeout(() => getAllProducts().catch(console.error), 1000);
 
-// Search products
 app.get('/api/products', async (req, res) => {
   try {
     const q = (req.query.q || '').trim();
     const all = req.query.all === 'true';
-    
     if (all || !q) {
-      // Return all products (for suggestions)
       const products = await getAllProducts();
       return res.json({ total: products.length, data: products });
     }
-    
     const data = await kiotApi(`/products?name=${encodeURIComponent(q)}&pageSize=50&includeInventory=true&orderBy=name&orderDirection=ASC`);
     res.json(data);
   } catch (err) {
@@ -89,7 +82,6 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-// Get branches
 app.get('/api/branches', async (req, res) => {
   try {
     const data = await kiotApi('/branches');
@@ -99,11 +91,9 @@ app.get('/api/branches', async (req, res) => {
   }
 });
 
-// Serve static
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-const PORT = 3143;
+const PORT = process.env.PORT || 3143;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🥃 CR143 KiotViet Check — http://localhost:${PORT}`);
-  console.log(`📱 Điện thoại truy cập: http://192.168.100.17:${PORT}`);
 });
