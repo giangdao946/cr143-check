@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>CR143 - Tra cứu hàng hóa</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #fff; color: #1a1a1a; min-height: 100vh; }
+.header { background: linear-gradient(135deg, #085e6d 0%, #0e7f8f 100%); padding: 24px 20px; text-align: center; }
+.header h1 { font-family: 'Quicksand', sans-serif; font-size: 1.6rem; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
+.header p { font-family: 'Quicksand', sans-serif; font-size: 0.9rem; color: #a7f3d0; margin-top: 6px; font-weight: 500; }
+.search-box { padding: 16px; position: sticky; top: 0; background: #fff; z-index: 10; border-bottom: 1px solid #e0f2f1; }
+.search-wrap { display: flex; gap: 8px; position: relative; }
+.search-wrap input { flex: 1; padding: 14px 16px; border-radius: 12px; border: 2px solid #e0f2f1; background: #fff; color: #1a1a1a; font-size: 1rem; outline: none; transition: border-color 0.2s; }
+.search-wrap input:focus { border-color: #0e7f8f; }
+.search-wrap input::placeholder { color: #8fbfc7; }
+.search-wrap button { padding: 14px 24px; border-radius: 12px; border: none; background: #085e6d; color: #fff; font-weight: 700; font-size: 1rem; cursor: pointer; white-space: nowrap; }
+.search-wrap button:disabled { opacity: 0.5; }
+.suggestions { position: absolute; top: 100%; left: 0; right: 80px; background: #fff; border: 1px solid #e0f2f1; border-radius: 12px; margin-top: 4px; max-height: 260px; overflow-y: auto; box-shadow: 0 8px 24px rgba(8,94,109,0.12); display: none; z-index: 20; }
+.suggestions.show { display: block; }
+.sug-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0faf9; display: flex; justify-content: space-between; align-items: center; }
+.sug-item:last-child { border-bottom: none; }
+.sug-item:hover, .sug-item.active { background: #f0fdfa; }
+.sug-name { font-size: 0.9rem; color: #1a1a1a; }
+.sug-name mark { background: #ccfbf1; color: #085e6d; border-radius: 2px; padding: 0 2px; }
+.sug-stock { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+.sug-stock.has { background: #dcfce7; color: #16a34a; }
+.sug-stock.empty { background: #fff1f2; color: #e11d48; }
+.sug-loading { padding: 16px; text-align: center; color: #8fbfc7; font-size: 0.85rem; }
+.filters { padding: 0 16px 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+.filter-btn { padding: 6px 12px; border-radius: 20px; border: 1px solid #e0f2f1; background: #fff; color: #085e6d; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+.filter-btn.active { background: #085e6d; color: #fff; border-color: #085e6d; font-weight: 600; }
+.results { padding: 0 16px 16px; }
+.status { text-align: center; padding: 40px 16px; color: #8fbfc7; }
+.status .icon { font-size: 2.5rem; margin-bottom: 8px; }
+.product-card { background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid #e0f2f1; box-shadow: 0 1px 4px rgba(8,94,109,0.06); transition: border-color 0.2s; }
+.product-card:hover { border-color: #0e7f8f; }
+.product-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.product-name { font-size: 1rem; font-weight: 600; color: #1a1a1a; line-height: 1.3; flex: 1; }
+.product-code { font-size: 0.75rem; color: #085e6d; background: #f0fdfa; padding: 3px 8px; border-radius: 6px; margin-left: 8px; white-space: nowrap; }
+.product-price { display: flex; gap: 16px; margin-bottom: 12px; }
+.price-item { display: flex; flex-direction: column; }
+.price-label { font-size: 0.7rem; color: #8fbfc7; text-transform: uppercase; letter-spacing: 0.5px; }
+.price-value { font-size: 1.1rem; font-weight: 700; color: #085e6d; }
+.price-value.cost { color: #6b9ba3; font-size: 0.95rem; }
+.inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
+.inv-item { background: #f0fdfa; border-radius: 8px; padding: 8px 10px; text-align: center; border: 1px solid #e0f2f1; }
+.inv-branch { font-size: 0.7rem; color: #8fbfc7; margin-bottom: 2px; }
+.inv-qty { font-size: 1rem; font-weight: 700; }
+.inv-qty.in-stock { color: #16a34a; }
+.inv-qty.out-stock { color: #e11d48; }
+.total-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0 4px; border-top: 1px solid #e0f2f1; margin-top: 8px; font-size: 0.85rem; }
+.total-label { color: #8fbfc7; }
+.total-value { font-weight: 700; font-size: 1rem; }
+.total-value.in-stock { color: #16a34a; }
+.total-value.out-stock { color: #e11d48; }
+.result-count { padding: 8px 0; font-size: 0.85rem; color: #6b9ba3; }
+.loading { display: inline-block; width: 20px; height: 20px; border: 2px solid #e0f2f1; border-top-color: #085e6d; border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>✨ CR143 - Tra cứu hàng hóa 🍷</h1>
+  <p>Tìm nhanh giá & tồn kho ~ vui mỗi ngày 🌿</p>
+</div>
+
+<div class="search-box">
+  <div class="search-wrap">
+    <input type="text" id="searchInput" placeholder="Nhập tên rượu... (VD: bowmore, jura)" autocomplete="off" autofocus>
+    <button id="searchBtn" onclick="search()">Tìm</button>
+    <div class="suggestions" id="suggestions"></div>
+  </div>
+</div>
+
+<div class="filters" id="filters" style="display:none;"></div>
+
+<div class="results" id="results">
+  <div class="status">
+    <div class="icon">🔍</div>
+    <div>Nhập tên sản phẩm để tra cứu</div>
+  </div>
+</div>
+
+<script>
+const API_BASE = '/api';
+let allProducts = [];
+let currentFilter = 'all';
+let branches = {};
+let allNames = []; // cached product list for suggestions
+let sugIndex = -1;
+let debounceTimer = null;
+
+// Load all product names on startup for suggestions
+async function loadAllNames() {
+  try {
+    const res = await fetch(`${API_BASE}/products?q=&all=true`);
+    const data = await res.json();
+    allNames = (data.data || []).map(p => ({
+      name: p.name,
+      code: p.code,
+      barCode: p.barCode || '',
+      basePrice: p.basePrice || 0,
+      totalStock: (p.inventories || []).reduce((s, i) => s + (i.onHand || 0), 0)
+    }));
+  } catch(e) { console.log('Could not preload names'); }
+}
+loadAllNames();
+
+const input = document.getElementById('searchInput');
+const sugBox = document.getElementById('suggestions');
+
+input.addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => showSuggestions(input.value.trim()), 150);
+});
+
+input.addEventListener('keydown', e => {
+  const items = sugBox.querySelectorAll('.sug-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    sugIndex = Math.min(sugIndex + 1, items.length - 1);
+    updateSugActive(items);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    sugIndex = Math.max(sugIndex - 1, -1);
+    updateSugActive(items);
+  } else if (e.key === 'Enter') {
+    if (sugIndex >= 0 && items[sugIndex]) {
+      input.value = items[sugIndex].dataset.name;
+      hideSuggestions();
+    }
+    search();
+  } else if (e.key === 'Escape') {
+    hideSuggestions();
+  }
+});
+
+input.addEventListener('focus', () => {
+  if (input.value.trim().length >= 1) showSuggestions(input.value.trim());
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) hideSuggestions();
+});
+
+function showSuggestions(q) {
+  if (q.length < 1) { hideSuggestions(); return; }
+  
+  const lower = q.toLowerCase();
+  // Split search terms for flexible matching
+  const terms = lower.split(/\s+/).filter(t => t);
+  
+  const matches = allNames.filter(p => {
+    const name = p.name.toLowerCase();
+    return terms.every(t => name.includes(t));
+  }).slice(0, 10);
+  
+  if (matches.length === 0) {
+    // Try fuzzy: match if most terms match
+    const fuzzy = allNames.filter(p => {
+      const name = p.name.toLowerCase();
+      const matched = terms.filter(t => name.includes(t));
+      return matched.length >= Math.ceil(terms.length * 0.5);
+    }).slice(0, 8);
+    
+    if (fuzzy.length === 0) { hideSuggestions(); return; }
+    renderSuggestions(fuzzy, terms);
+  } else {
+    renderSuggestions(matches, terms);
+  }
+}
+
+function renderSuggestions(matches, terms) {
+  sugIndex = -1;
+  let html = '';
+  matches.forEach(p => {
+    let highlighted = escHtml(p.name);
+    terms.forEach(t => {
+      const regex = new RegExp(`(${escRegex(t)})`, 'gi');
+      highlighted = highlighted.replace(regex, '<mark>$1</mark>');
+    });
+    const stockClass = p.totalStock > 0 ? 'has' : 'empty';
+    const stockText = p.totalStock > 0 ? `Tồn: ${p.totalStock}` : 'Hết hàng';
+    const priceText = p.basePrice > 0 ? new Intl.NumberFormat('vi-VN').format(Math.round(p.basePrice)) : '—';
+    html += `<div class="sug-item" data-name="${escAttr(p.name)}" onclick="pickSuggestion(this)">
+      <div style="flex:1;min-width:0;">
+        <span class="sug-name">${highlighted}</span>
+        <span style="font-size:0.7rem;color:#6b9ba3;margin-left:6px;">${escHtml(p.code)}</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+        <span style="font-size:0.75rem;font-weight:600;color:#085e6d;">${priceText}</span>
+        <span class="sug-stock ${stockClass}">${stockText}</span>
+      </div>
+    </div>`;
+  });
+  sugBox.innerHTML = html;
+  sugBox.classList.add('show');
+}
+
+function pickSuggestion(el) {
+  input.value = el.dataset.name;
+  hideSuggestions();
+  search();
+}
+
+function hideSuggestions() {
+  sugBox.classList.remove('show');
+  sugIndex = -1;
+}
+
+function updateSugActive(items) {
+  items.forEach((el, i) => el.classList.toggle('active', i === sugIndex));
+  if (sugIndex >= 0 && items[sugIndex]) {
+    items[sugIndex].scrollIntoView({ block: 'nearest' });
+  }
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(s) { return s.replace(/"/g,'&quot;'); }
+function escRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+async function search() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return;
+  hideSuggestions();
+  
+  const btn = document.getElementById('searchBtn');
+  const results = document.getElementById('results');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span>';
+  results.innerHTML = '<div class="status"><span class="loading"></span><br><br>Đang tìm kiếm...</div>';
+  
+  try {
+    const res = await fetch(`${API_BASE}/products?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    allProducts = data.data || [];
+    
+    branches = {};
+    allProducts.forEach(p => {
+      (p.inventories || []).forEach(inv => {
+        branches[inv.branchId] = inv.branchName;
+      });
+    });
+    
+    const filtersDiv = document.getElementById('filters');
+    if (allProducts.length > 0) {
+      filtersDiv.style.display = 'flex';
+      filtersDiv.innerHTML = '<button class="filter-btn active" data-filter="all" onclick="filterBranch(\'all\', this)">Tất cả</button>';
+      Object.entries(branches).forEach(([id, name]) => {
+        filtersDiv.innerHTML += `<button class="filter-btn" data-filter="${id}" onclick="filterBranch('${id}', this)">${name}</button>`;
+      });
+    } else {
+      filtersDiv.style.display = 'none';
+    }
+    
+    currentFilter = 'all';
+    renderProducts();
+  } catch (err) {
+    results.innerHTML = `<div class="status"><div class="icon">❌</div><div>Lỗi: ${err.message}</div></div>`;
+  }
+  
+  btn.disabled = false;
+  btn.textContent = 'Tìm';
+}
+
+function filterBranch(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderProducts();
+}
+
+function fmt(n) {
+  if (!n || n === 0) return '0';
+  return new Intl.NumberFormat('vi-VN').format(Math.round(n));
+}
+
+function renderProducts() {
+  const results = document.getElementById('results');
+  
+  if (allProducts.length === 0) {
+    results.innerHTML = '<div class="status"><div class="icon">😕</div><div>Không tìm thấy sản phẩm nào</div></div>';
+    return;
+  }
+  
+  let html = `<div class="result-count">Tìm thấy <strong>${allProducts.length}</strong> sản phẩm</div>`;
+  
+  allProducts.forEach(p => {
+    const invs = (p.inventories || []).filter(i => currentFilter === 'all' || String(i.branchId) === currentFilter);
+    const totalQty = invs.reduce((s, i) => s + (i.onHand || 0), 0);
+    const stockClass = totalQty > 0 ? 'in-stock' : 'out-stock';
+    
+    html += `<div class="product-card">
+      <div class="product-header">
+        <span class="product-name">${p.name}</span>
+        <span class="product-code">${p.code}</span>
+      </div>
+      <div class="product-price">
+        <div class="price-item">
+          <span class="price-label">Giá bán</span>
+          <span class="price-value">${fmt(p.basePrice)}</span>
+        </div>`;
+    
+    const costs = invs.filter(i => i.cost > 0);
+    if (costs.length > 0) {
+      const avgCost = costs.reduce((s, i) => s + i.cost, 0) / costs.length;
+      html += `<div class="price-item">
+          <span class="price-label">Giá vốn TB</span>
+          <span class="price-value cost">${fmt(avgCost)}</span>
+        </div>`;
+    }
+    
+    html += `</div>
+      <div class="inventory-grid">`;
+    
+    invs.forEach(inv => {
+      const qClass = inv.onHand > 0 ? 'in-stock' : 'out-stock';
+      html += `<div class="inv-item">
+          <div class="inv-branch">${inv.branchName}</div>
+          <div class="inv-qty ${qClass}">${inv.onHand}</div>
+        </div>`;
+    });
+    
+    html += `</div>
+      <div class="total-row">
+        <span class="total-label">Tổng tồn kho</span>
+        <span class="total-value ${stockClass}">${totalQty}</span>
+      </div>
+    </div>`;
+  });
+  
+  results.innerHTML = html;
+}
+</script>
+
+</body>
+</html>
