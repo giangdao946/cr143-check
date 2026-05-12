@@ -10,8 +10,9 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #fff; color: #1a1a1a; min-height: 100vh; }
-.header { background: linear-gradient(135deg, #085e6d 0%, #0e7f8f 100%); padding: 8px 16px; text-align: center; }
+.header { background: linear-gradient(135deg, #085e6d 0%, #0e7f8f 100%); padding: 8px 16px; display: flex; justify-content: space-between; align-items: center; }
 .header h1 { font-family: 'Quicksand', sans-serif; font-size: 0.95rem; font-weight: 700; color: #fff; letter-spacing: 0.3px; }
+.header-time { font-family: 'Quicksand', sans-serif; font-size: 0.75rem; color: #a7f3d0; font-weight: 500; white-space: nowrap; }
 .search-box { padding: 16px; position: sticky; top: 0; background: #fff; z-index: 10; border-bottom: 1px solid #e0f2f1; }
 .search-wrap { display: flex; gap: 8px; position: relative; }
 .search-wrap input { flex: 1; padding: 14px 16px; border-radius: 12px; border: 2px solid #e0f2f1; background: #fff; color: #1a1a1a; font-size: 1rem; outline: none; transition: border-color 0.2s; }
@@ -70,6 +71,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 
 <div class="header">
   <h1>✨ CR143 - Tra cứu hàng hóa 🍷</h1>
+  <span class="header-time" id="headerTime"></span>
 </div>
 
 <div class="search-box">
@@ -90,6 +92,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 </div>
 
 <script>
+// Clock
+function updateClock() {
+  const now = new Date();
+  const days = ['CN','T2','T3','T4','T5','T6','T7'];
+  const d = days[now.getDay()];
+  const dd = String(now.getDate()).padStart(2,'0');
+  const mm = String(now.getMonth()+1).padStart(2,'0');
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mi = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('headerTime').textContent = `${d}, ${dd}/${mm} ${hh}:${mi}`;
+}
+updateClock();
+setInterval(updateClock, 30000);
+
 const API_BASE = '/api';
 let allProducts = [];
 let currentFilter = 'all';
